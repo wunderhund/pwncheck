@@ -8,18 +8,31 @@ import argparse
 import sys
 import csv
 from re import findall
+from time import sleep
 
 
-def get_page(args, page):
+def get_page(args, page, request_delay):
     """HTTP Request function with error handling"""
-    for attempt in range(3):
+    response = ''
+    for attempt in range(2):
         try:
+            if args.debug:
+                print("Waiting %f seconds before next request" % request_delay)
+            sleep(request_delay)
             response = urlopen(page)
-            return response
+            return response, request_delay
         except HTTPError as error:
             if args.debug:
                 print("HTTP Request %d failed: %d %s" %
                       (attempt+1, error.code, error.reason))
+            if error.headers.get('Retry-After'):
+                print("Rate Limit hit! Retry-After: %s s" % error.headers.get('Retry-After'))
+                if int(error.headers.get('Retry-After')) >= 10:
+                    print("Request delay has risen to %s seconds, quitting!" %
+                          error.headers.get('Retry-After'))
+                    sys.exit()
+                else:
+                    sleep((float(error.headers.get('Retry-After'))))
         except URLError as error:
             if args.debug:
                 print("URL failed: %s" % (error.reason))
@@ -27,11 +40,19 @@ def get_page(args, page):
             if args.debug:
                 print("Unknown other failure")
 
+    return response, request_delay
+
 
 def pwned_requests(args, valid_emails):
     """Make requests to haveibeenpwned API"""
     breach_dict = {}
+    print('args.wait: ', args.wait)
+    print(type(args.wait))
+    request_delay = args.wait
     for email in valid_emails:
+
+        if args.debug:
+            print("E-mail: %s" % email)
 
         # Build haveibeenpwned request
         req = Request(urljoin('https://haveibeenpwned.com/api/v2/breachedaccount/',
@@ -39,7 +60,7 @@ def pwned_requests(args, valid_emails):
         req.add_header('User-Agent', 'Pwnage-Checker')
 
         # Submit request
-        response = get_page(args, req)
+        response, request_delay = get_page(args, req, request_delay)
 
         # If breaches are found, format response as json output
         if response:
@@ -103,6 +124,8 @@ def main():
     parser.add_argument('-i', '--infile', help="Input file with e-mail addresses")
     parser.add_argument('-o', '--outfile', help='CSV output file')
     parser.add_argument('-d', '--debug', help='Print debug messages', action='store_true')
+    parser.add_argument('-w', '--wait', help='Wait time (request delay) between requests. \
+                        Defaults to 1.6 seconds', type=float, default=1.6)
     args = parser.parse_args()
 
     if not args.email and not args.infile:
