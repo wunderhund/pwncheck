@@ -47,8 +47,8 @@ def pwned_requests(args, valid_emails):
     """Make requests to haveibeenpwned API"""
     breach_dict = {}
     print('args.wait: ', args.wait)
-    print(type(args.wait))
     request_delay = args.wait
+    
     for email in valid_emails:
 
         if args.debug:
