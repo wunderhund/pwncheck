@@ -1,3 +1,5 @@
+## Note: This script was written for version 2 of the haveibeenpwned API, which has [been deprecated](https://haveibeenpwned.com/API/v2). The current version of the API is [version 3](https://haveibeenpwned.com/API/v3), which requires a [paid subscription](https://haveibeenpwned.com/API/Key).
+
 # pwncheck
 Python3 script for submitting e-mail addresses to the haveibeenpwned API (https://haveibeenpwned.com/API/v2)
 
